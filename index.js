@@ -93,9 +93,9 @@ module.exports = {
 
         this.apiRequest('get', '/tasks/'.concat(step.input('task').first()), {}, auth, function (error, responce, body) {
 
-            if (error) {
+            if (error || body.errors) {
 
-                this.fail(error);
+                this.fail(error || body.errors);
             } else {
 
                 this.complete(this.pickResult(body, globalPickResult));
