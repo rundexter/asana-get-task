@@ -4,23 +4,25 @@
 {
     //Required. Inputs the module expects.
     "inputs": [
-        //e.g.
-        /*
         {
-            "id": "from",
-            "title":"From"
+            "id": "task",
+            "title":"Task ID"
         }
-        */
     ],
     //Required. Outputs the module emits.
     "outputs": [
-      //e.g.
-      /*
         {
-            "id": "from",
-            "title":"From"
+            "id": "assignee_id",
+            "title":"assignee id"
+        },
+        {
+            "id": "assignee_name",
+            "title":"assignee name"
+        },
+        {
+            "id": "created_at",
+            "title":"created_at"
         }
-      */
     ],
     "title": "Asana Get Task" /* Required.A display name for the module */
 }
