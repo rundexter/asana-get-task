@@ -82,6 +82,17 @@ module.exports = {
         request[method]({url: api, form: options, auth: auth, json: true}, callback);
     },
 
+    prepareStringInputs: function (inputs, inputAttributes) {
+        var result = {};
+
+        _.map(_.pick(inputs, inputAttributes), function (inputValue, inputKey) {
+
+            result[inputKey] = _(inputValue).toString();
+        });
+
+        return result;
+    },
+
     /**
      * The main entry point for the Dexter module
      *
