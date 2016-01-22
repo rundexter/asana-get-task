@@ -24,6 +24,9 @@
             "title":"created_at"
         }
     ],
+    "providers": [{
+        "name": "asana"
+    }],
     "icon": "tasks",
     "title": "Asana Get Task" /* Required.A display name for the module */
 }

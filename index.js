@@ -1,98 +1,18 @@
-var _ = require('lodash');
-var request = require('request').defaults({
-    baseUrl: 'https://app.asana.com/api/1.0/'
-});
-var globalPickResult = {
-    'data.assignee.id': 'assignee_id',
-    'data.assignee.name': 'assignee_name',
-    'data.created_at': 'created_at'
-};
+var _ = require('lodash'),
+    util = require('./util.js'),
+    request = require('request').defaults({
+        baseUrl: 'https://app.asana.com/api/1.0/'
+    }),
+    pickInputs = {
+        'task': { key: 'task', validate: { req: true } }
+    },
+    pickOutputs = {
+        'assignee_id': 'data.assignee.id',
+        'assignee_name': 'data.assignee.name',
+        'created_at': 'data.created_at'
+    };
 
 module.exports = {
-    /**
-     * Return pick result.
-     *
-     * @param output
-     * @param pickResult
-     * @returns {*}
-     */
-    pickResult: function (output, pickResult) {
-        var result = {};
-
-        _.map(_.keys(pickResult), function (resultVal) {
-
-            if (_.has(output, resultVal)) {
-
-                if (_.isObject(pickResult[resultVal])) {
-                    if (_.isArray(_.get(output, resultVal))) {
-
-                        if (!_.isArray(result[pickResult[resultVal].key])) {
-                            result[pickResult[resultVal].key] = [];
-                        }
-
-                        _.map(_.get(output, resultVal), function (inOutArrayValue) {
-
-                            result[pickResult[resultVal].key].push(this.pickResult(inOutArrayValue, pickResult[resultVal].fields));
-                        }, this);
-                    } else if (_.isObject(_.get(output, resultVal))){
-
-                        result[pickResult[resultVal].key] = this.pickResult(_.get(output, resultVal), pickResult[resultVal].fields);
-                    }
-                } else {
-                    _.set(result, pickResult[resultVal], _.get(output, resultVal));
-                }
-            }
-        }, this);
-
-        return result;
-    },
-
-    /**
-     * Return auth object.
-     *
-     *
-     * @param dexter
-     * @returns {*}
-     */
-    authParams: function (dexter) {
-        var res = {};
-
-        if (dexter.environment('asana_access_token')) {
-            res = {
-                bearer: dexter.environment('asana_access_token')
-            };
-        } else {
-            this.fail('A [asana_access_token] env variables need for this module');
-        }
-
-        return res;
-    },
-
-    /**
-     * Send api request.
-     *
-     * @param method
-     * @param api
-     * @param options
-     * @param auth
-     * @param callback
-     */
-    apiRequest: function (method, api, options, auth, callback) {
-
-        request[method]({url: api, form: options, auth: auth, json: true}, callback);
-    },
-
-    prepareStringInputs: function (inputs, inputAttributes) {
-        var result = {};
-
-        _.map(_.pick(inputs, inputAttributes), function (inputValue, inputKey) {
-
-            result[inputKey] = _(inputValue).toString();
-        });
-
-        return result;
-    },
-
     /**
      * The main entry point for the Dexter module
      *
@@ -100,17 +20,27 @@ module.exports = {
      * @param {AppData} dexter Container for all data used in this workflow.
      */
     run: function(step, dexter) {
-        var auth = this.authParams(dexter);
+        var credentials = dexter.provider('asana').credentials('access_token'),
+            inputs = util.pickInputs(step, pickInputs),
+            validateErrors = util.checkValidateErrors(inputs, pickInputs);
 
-        this.apiRequest('get', '/tasks/'.concat(step.input('task').first()), {}, auth, function (error, responce, body) {
+        // check params.
+        if (validateErrors)
+            return this.fail(validateErrors);
 
-            if (error || body.errors) {
-
-                this.fail(error || body.errors);
-            } else {
-
-                this.complete(this.pickResult(body, globalPickResult));
+        //send API request
+        request.get({
+            uri: 'tasks/' + inputs.task,
+            json: true,
+            auth: {
+                'bearer': credentials
             }
+        }, function (error, response, body) {
+            if (error || (body && body.errors) || response.statusCode >= 400)
+                this.fail(error || body.errors || { statusCode: response.statusCode, headers: response.headers, body: body });
+            else
+                this.complete(util.pickOutputs(body, pickOutputs) || {});
+
         }.bind(this));
     }
 };
